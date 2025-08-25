@@ -1,237 +1,183 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import {
+  Container,
+  Title,
+  InputRow,
+  InputGroup,
+  Label,
+  Input,
+  SubmitButton,
+  Table,
+  TableHeader,
+  TableCell,
+  ErrorMessage,
+} from "./styledComponets";
 
 export default function ContactForm() {
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    phoneNumber: "",
-  });
-
   const [contacts, setContacts] = useState([]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+    reset,
+    setError,
+    clearErrors,
+  } = useForm({
+    mode: "onChange",
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phoneNumber: "",
+    },
+  });
 
-    // For phone number, only allow numbers
-    if (name === "phoneNumber") {
-      const numbersOnly = value.replace(/[^0-9]/g, "");
-      setFormData((prev) => ({
-        ...prev,
-        [name]: numbersOnly,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
-  };
-
-  const handleSubmit = () => {
-    // Check if contact already exists
+  const onSubmit = (data) => {
+    // Check for duplicates
     const isDuplicate = contacts.some(
       (contact) =>
-        contact.firstName.toLowerCase() === formData.firstName.toLowerCase() &&
-        contact.lastName.toLowerCase() === formData.lastName.toLowerCase() &&
-        contact.phoneNumber === formData.phoneNumber
+        contact.firstName.toLowerCase() === data.firstName.toLowerCase() &&
+        contact.lastName.toLowerCase() === data.lastName.toLowerCase() &&
+        contact.phoneNumber === data.phoneNumber
     );
 
     if (isDuplicate) {
-      alert("This contact already exists!");
+      setError("root", {
+        type: "duplicate",
+        message: "This contact already exists!",
+      });
       return;
     }
 
-    // Add contact to the list
-    setContacts((prev) => [...prev, { ...formData, id: Date.now() }]);
-    console.log("Form submitted:", formData);
-    setFormData({ firstName: "", lastName: "", phoneNumber: "" });
+    // Clear any previous errors
+    clearErrors("root");
+
+    // Add contact
+    setContacts((prev) => [...prev, { ...data, id: Date.now() }]);
+    console.log("Form submitted:", data);
+    reset();
   };
 
-  // Check if all fields are filled
-  const isFormValid =
-    formData.firstName.trim() &&
-    formData.lastName.trim() &&
-    formData.phoneNumber.trim();
-
-  // Sort contacts alphabetically by last name, then first name
   const sortedContacts = [...contacts].sort((a, b) => {
-    if (a.lastName.toLowerCase() !== b.lastName.toLowerCase()) {
+    if (a.lastName.toLowerCase() !== b.lastName.toLowerCase())
       return a.lastName.toLowerCase().localeCompare(b.lastName.toLowerCase());
-    }
+
     return a.firstName.toLowerCase().localeCompare(b.firstName.toLowerCase());
   });
 
-  const containerStyle = {
-    padding: "20px",
-    maxWidth: "500px",
-    margin: "0 auto",
-    fontFamily: "Arial, sans-serif",
-    display: "flex",
-    flexDirection: "column",
-  };
-
-  const titleStyle = {
-    marginBottom: "20px",
-    color: "#333",
-  };
-
-  const inputRowStyle = {
-    display: "flex",
-    gap: "15px",
-    marginBottom: "15px",
-  };
-
-  const inputGroupStyle = {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-  };
-
-  const labelStyle = {
-    display: "block",
-    marginBottom: "5px",
-    fontWeight: "500",
-    color: "#555",
-  };
-
-  const inputStyle = {
-    width: "100%",
-    padding: "8px",
-    fontSize: "16px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
-    boxSizing: "border-box",
-  };
-
-  const submitButtonStyle = {
-    backgroundColor: isFormValid ? "#007bff" : "#6c757d",
-    color: "white",
-    padding: "10px 20px",
-    border: "none",
-    borderRadius: "4px",
-    fontSize: "16px",
-    cursor: isFormValid ? "pointer" : "not-allowed",
-    alignSelf: "flex-start",
-    opacity: isFormValid ? 1 : 0.6,
-  };
-
-  const tableStyle = {
-    width: "100%",
-    marginTop: "30px",
-    borderCollapse: "collapse",
-    border: "1px solid #ddd",
-  };
-
-  const thStyle = {
-    backgroundColor: "#f8f9fa",
-    padding: "12px",
-    textAlign: "left",
-    fontWeight: "600",
-    border: "1px solid #ddd",
-  };
-
-  const tdStyle = {
-    padding: "12px",
-    border: "1px solid #ddd",
-  };
-
   return (
-    <div style={containerStyle}>
-      <h2 style={titleStyle}>Contact Form</h2>
+    <Container>
+      <Title>Contact Form</Title>
 
-      <div style={inputRowStyle}>
-        <div style={inputGroupStyle}>
-          <label style={labelStyle}>First Name:</label>
-          <input
-            type="text"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleChange}
-            style={inputStyle}
-            required
-          />
-        </div>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <InputRow>
+          <InputGroup>
+            <Label>First Name:</Label>
+            <Input
+              type="text"
+              {...register("firstName", {
+                required: "First name is required",
+                minLength: {
+                  value: 2,
+                  message: "First name must be at least 2 characters",
+                },
+                pattern: {
+                  value: /^[A-Za-z\s]+$/,
+                  message: "First name can only contain letters and spaces",
+                },
+              })}
+              hasError={!!errors.firstName}
+            />
+            {errors.firstName && (
+              <ErrorMessage>{errors.firstName.message}</ErrorMessage>
+            )}
+          </InputGroup>
 
-        <div style={inputGroupStyle}>
-          <label style={labelStyle}>Last Name:</label>
-          <input
-            type="text"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
-            style={inputStyle}
-            required
-          />
-        </div>
-      </div>
+          <InputGroup>
+            <Label>Last Name:</Label>
+            <Input
+              type="text"
+              {...register("lastName", {
+                required: "Last name is required",
+                minLength: {
+                  value: 2,
+                  message: "Last name must be at least 2 characters",
+                },
+                pattern: {
+                  value: /^[A-Za-z\s]+$/,
+                  message: "Last name can only contain letters and spaces",
+                },
+              })}
+              hasError={!!errors.lastName}
+            />
+            {errors.lastName && (
+              <ErrorMessage>{errors.lastName.message}</ErrorMessage>
+            )}
+          </InputGroup>
+        </InputRow>
 
-      <div style={inputRowStyle}>
-        <div style={inputGroupStyle}>
-          <label style={labelStyle}>Phone Number:</label>
-          <input
-            type="tel"
-            name="phoneNumber"
-            value={formData.phoneNumber}
-            onChange={handleChange}
-            style={inputStyle}
-            required
-          />
-        </div>
-        <div style={inputGroupStyle}></div>
-      </div>
+        <InputRow>
+          <InputGroup>
+            <Label>Phone Number:</Label>
+            <Input
+              type="tel"
+              {...register("phoneNumber", {
+                required: "Phone number is required",
+                pattern: {
+                  value: /^[0-9]{10}$/,
+                  message: "Phone number must be exactly 10 digits",
+                },
+                setValueAs: (value) => value.replace(/[^0-9]/g, ""),
+              })}
+              hasError={!!errors.phoneNumber}
+            />
+            {errors.phoneNumber && (
+              <ErrorMessage>{errors.phoneNumber.message}</ErrorMessage>
+            )}
+          </InputGroup>
 
-      <button
-        onClick={handleSubmit}
-        disabled={!isFormValid}
-        style={submitButtonStyle}
-        onMouseOver={(e) => {
-          if (isFormValid) {
-            e.target.style.backgroundColor = "#0056b3";
-          }
-        }}
-        onMouseOut={(e) => {
-          if (isFormValid) {
-            e.target.style.backgroundColor = "#007bff";
-          }
-        }}
-      >
-        Submit
-      </button>
+          <InputGroup></InputGroup>
+        </InputRow>
 
-      {/* Contacts Table */}
-      <table style={tableStyle}>
+        {errors.root && (
+          <ErrorMessage style={{ marginBottom: "15px" }}>
+            {errors.root.message}
+          </ErrorMessage>
+        )}
+
+        <SubmitButton type="submit" disabled={!isValid} isValid={isValid}>
+          Submit
+        </SubmitButton>
+      </form>
+
+      <Table>
         <thead>
           <tr>
-            <th style={thStyle}>First Name</th>
-            <th style={thStyle}>Last Name</th>
-            <th style={thStyle}>Phone Number</th>
+            <TableHeader>First Name</TableHeader>
+            <TableHeader>Last Name</TableHeader>
+            <TableHeader>Phone Number</TableHeader>
           </tr>
         </thead>
+
         <tbody>
           {sortedContacts.map((contact) => (
             <tr key={contact.id}>
-              <td style={tdStyle}>{contact.firstName}</td>
-              <td style={tdStyle}>{contact.lastName}</td>
-              <td style={tdStyle}>{contact.phoneNumber}</td>
+              <TableCell>{contact.firstName}</TableCell>
+              <TableCell>{contact.lastName}</TableCell>
+              <TableCell>{contact.phoneNumber}</TableCell>
             </tr>
           ))}
+
           {contacts.length === 0 && (
             <tr>
-              <td
-                colSpan="3"
-                style={{
-                  ...tdStyle,
-                  textAlign: "center",
-                  color: "#666",
-                  fontStyle: "italic",
-                }}
-              >
+              <TableCell colSpan="3" className="empty-state">
                 No contacts added yet
-              </td>
+              </TableCell>
             </tr>
           )}
         </tbody>
-      </table>
-    </div>
+      </Table>
+    </Container>
   );
 }
